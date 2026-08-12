@@ -87,8 +87,14 @@ while IFS= read -r repo; do
   branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
   wip=$(git -C "$repo" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
   n=$(echo "$log" | wc -l | tr -d ' ')
-  echo "## $(basename "$repo") — ${n}건 · \`$branch\` · 미커밋 ${wip}"
+  echo "## $(basename "$repo") — ${n}건 · \`$branch\`"
   echo "$log"
+  if [ "$wip" -gt 0 ]; then
+    files=$(git -C "$repo" status --porcelain 2>/dev/null | cut -c4- | head -12 \
+            | awk 'BEGIN{ORS=""} NR>1{print " · "} {print}')
+    [ "$wip" -gt 12 ] && files="$files · 외 $((wip-12))개"
+    echo "- _미커밋 ${wip}: ${files}_"
+  fi
   echo
 done < <(repos)
 

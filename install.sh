@@ -5,6 +5,7 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 
 mkdir -p "$HOME_DIR/log" "$HOME/.local/bin"
 install -m 755 "$SRC/bin/standup" "$HOME/.local/bin/standup"
+echo "CLI 설치: ~/.local/bin/standup"
 
 if [ ! -f "$HOME_DIR/config" ]; then
   cat > "$HOME_DIR/config" <<'CONF'
@@ -22,10 +23,18 @@ CONF
   echo "설정 생성: $HOME_DIR/config"
 fi
 
+# Claude Code — 슬래시 커맨드
 if [ -d "$HOME/.claude" ]; then
   mkdir -p "$HOME/.claude/commands"
   install -m 644 "$SRC/commands/standup.md" "$HOME/.claude/commands/standup.md"
-  echo "Claude 커맨드 설치: /standup"
+  echo "Claude Code 설치: /standup"
+fi
+
+# Codex — 스킬
+if [ -d "$HOME/.codex" ]; then
+  mkdir -p "$HOME/.codex/skills/standup"
+  install -m 644 "$SRC/skills/standup/SKILL.md" "$HOME/.codex/skills/standup/SKILL.md"
+  echo "Codex 설치: skills/standup"
 fi
 
 case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *)
@@ -33,7 +42,6 @@ case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *)
 esac
 
 echo
-echo "탐지된 git 신원:"
-"$HOME/.local/bin/standup" --whoami | tail -n +2
+"$HOME/.local/bin/standup" --whoami
 echo
-echo "완료. 확인: standup --whoami / standup"
+echo "완료. 확인: standup"

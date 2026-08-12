@@ -15,7 +15,8 @@ git clone <repo> ~/src/standup
 | --- | --- |
 | `~/.local/bin/standup` | 커밋 수집 CLI |
 | `~/.standup/config` | 스캔 경로·시작 시각 |
-| `~/.claude/commands/standup.md` | `/standup` 슬래시 커맨드 (Claude Code 쓰는 경우만) |
+| `~/.claude/commands/standup.md` | `/standup` 슬래시 커맨드 (Claude Code 있을 때만) |
+| `~/.codex/skills/standup/SKILL.md` | standup 스킬 (Codex 있을 때만) |
 
 `~/.local/bin` 이 PATH에 없으면 설치할 때 알려준다. 없으면 이렇게 넣는다.
 
@@ -40,7 +41,17 @@ Claude Code에서는 슬래시 커맨드로 요약까지 한 번에 한다.
 
 어제 보고서를 같이 읽어서 이어지는 작업은 한 흐름으로 묶고, 결과를 `~/.standup/log/<날짜>.md` 에 저장한다.
 
-Claude를 안 쓰면 수집 결과를 복사해서 쓰던 도구에 넣는다.
+Codex는 슬래시로 부르지 않는다. 스킬 설명을 보고 알아서 잡는다.
+
+```
+오늘 업무보고 정리해줘
+standup 스킬로 최근 3일치 뽑아줘
+```
+
+확실히 부르려면 스킬 이름을 문장에 넣는다. Claude와 달리 셸 실행을 모델이 직접 하므로,
+`standup` 을 실행했는지 한 번 보고 넘어간다.
+
+둘 다 안 쓰면 수집 결과를 복사해서 쓰던 도구에 넣는다.
 
 ```bash
 standup | pbcopy
