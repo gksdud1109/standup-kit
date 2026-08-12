@@ -38,6 +38,18 @@ fi
 
 SINCE="${1:-${STANDUP_SINCE:-05:00}}"
 
+# git 은 today/yesterday/N days ago 를 "지금 이 시각 기준"으로 해석한다.
+#   --since=today     → 지금 (0건이 나온다)
+#   --since=yesterday → 24시간 전 (어제 오전이 잘린다)
+# 달력 하루 단위로 쓰려면 자정으로 내려야 한다.
+day_ago() { date -v-"$1"d +%F 2>/dev/null || date -d "$1 days ago" +%F; }
+case "$SINCE" in
+  today|오늘)             SINCE="$(date +%F) 00:00" ;;
+  yesterday|어제)         SINCE="$(day_ago 1) 00:00" ;;
+  [0-9]*" day ago"|[0-9]*" days ago")
+                          SINCE="$(day_ago "${SINCE%% *}") 00:00" ;;
+esac
+
 if [ -n "${STANDUP_AUTHORS:-}" ]; then
   IFS=',' read -ra AUTHORS <<< "$STANDUP_AUTHORS"
 else

@@ -7,6 +7,9 @@ allowed-tools: Bash(standup:*), Bash(cat:*), Bash(date:*), Write
 ## 어제 보고서
 !`cat "$HOME/.standup/log/$(date -v-1d +%F 2>/dev/null || date -d yesterday +%F).md" 2>/dev/null || echo "(없음)"`
 
+## 오늘 이미 저장된 보고서 (있으면 여기에 합친다)
+!`cat "$HOME/.standup/log/$(date +%F).md" 2>/dev/null || echo "(없음)"`
+
 ## 커밋
 !`standup "$ARGUMENTS"`
 
@@ -55,6 +58,11 @@ allowed-tools: Bash(standup:*), Bash(cat:*), Bash(date:*), Write
 ### 저장
 
 같은 내용을 `$HOME/.standup/log/<오늘날짜>.md` 에 저장한다. 디렉터리가 없으면 만든다.
+
+**수집 결과가 `_해당 기간 커밋 없음_` 이면 파일을 저장하지 않는다.** 화면에만 그 사실을 한 줄로 알린다.
+빈 보고서로 덮어쓰면 오늘 이미 써둔 내용이 사라진다.
+
+**오늘 파일이 이미 있으면 덮어쓰지 말고 합친다.** 기존 항목을 지우거나 범위를 좁히지 않는다.
 **파일에는 코드펜스를 넣지 않는다.** 펜스는 화면 출력용이고 파일은 원본 마크다운이어야 한다.
 
 저장 후 펜스 다음 줄에 파일 경로만 한 줄 적는다.
