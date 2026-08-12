@@ -52,15 +52,36 @@ fi
 
 authArgs=(); for a in "${AUTHORS[@]}"; do a="${a// /}"; [ -n "$a" ] && authArgs+=(--author="$a"); done
 
+# 범위가 하루를 넘으면 날짜까지 찍는다 (며칠째 지연인지 판정하려면 날짜가 필요)
+DATES=$(
+  while IFS= read -r repo; do
+    git -C "$repo" log --all --no-merges --since="$SINCE" "${authArgs[@]}" \
+        --format='%ad' --date=format:'%Y-%m-%d' 2>/dev/null
+  done < <(repos) | sort -u | grep -c . || true
+)
+if [ "${DATES:-0}" -gt 1 ]; then
+  DATE_FMT='%m-%d %H:%M'
+  SPAN=$(
+    while IFS= read -r repo; do
+      git -C "$repo" log --all --no-merges --since="$SINCE" "${authArgs[@]}" \
+          --format='%ad' --date=format:'%m-%d' 2>/dev/null
+    done < <(repos) | sort -u
+  )
+  RANGE=" · $(echo "$SPAN" | head -1) ~ $(echo "$SPAN" | tail -1)"
+else
+  DATE_FMT='%H:%M'
+  RANGE=""
+fi
+
 echo "# $(date +%F) 커밋"
 echo
-echo "> 기준: \`$SINCE\` 이후 · 저자: ${AUTHORS[*]}"
+echo "> 기준: \`$SINCE\` 이후${RANGE} · 저자: ${AUTHORS[*]}"
 echo
 
 found=0
 while IFS= read -r repo; do
   log=$(git -C "$repo" log --all --no-merges --since="$SINCE" \
-        "${authArgs[@]}" --format='- `%ad` %s' --date=format:'%H:%M' 2>/dev/null | sort)
+        "${authArgs[@]}" --format='- `%ad` %s' --date=format:"$DATE_FMT" 2>/dev/null | sort)
   [ -z "$log" ] && continue
   found=1
   branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)

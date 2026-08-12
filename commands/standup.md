@@ -1,6 +1,6 @@
 ---
 description: 오늘 커밋으로 업무보고 초안 만들기 (어제 보고서와 대조)
-argument-hint: [since]
+argument-hint: [since]   예: /standup "3 days ago"
 allowed-tools: Bash(standup:*), Bash(cat:*), Bash(date:*), Write
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: Bash(standup:*), Bash(cat:*), Bash(date:*), Write
 !`cat "$HOME/.standup/log/$(date -v-1d +%F 2>/dev/null || date -d yesterday +%F).md" 2>/dev/null || echo "(없음)"`
 
 ## 오늘 커밋
-!`standup ${1:-}`
+!`standup "$ARGUMENTS"`
 
 ---
 
