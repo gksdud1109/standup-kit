@@ -1,18 +1,56 @@
 #!/usr/bin/env bash
 # standup — 여러 레포의 오늘 커밋을 모아 마크다운으로 출력
-# usage: standup [since]      기본 오늘 05:00
-#        standup "1 day ago"
+#   standup                오늘 05:00 이후
+#   standup "1 day ago"    기간 지정
+#   standup --whoami       탐지된 내 git 신원 보기
 set -uo pipefail
 
 CONF="${STANDUP_HOME:-$HOME/.standup}/config"
 [ -f "$CONF" ] && . "$CONF"
 
-SINCE="${1:-${STANDUP_SINCE:-05:00}}"
 IFS=':' read -ra ROOTS <<< "${STANDUP_ROOTS:-$HOME/development:$HOME/IdeaProjects}"
-IFS=',' read -ra AUTHORS <<< "${STANDUP_AUTHORS:-$(git config user.email)}"
 
-authArgs=(); for a in "${AUTHORS[@]}"; do [ -n "$a" ] && authArgs+=(--author="$a"); done
-[ ${#authArgs[@]} -eq 0 ] && { echo "저자가 비었습니다. ~/.standup/config 의 STANDUP_AUTHORS 를 채우세요." >&2; exit 1; }
+repos() {
+  local root
+  for root in "${ROOTS[@]}"; do
+    [ -d "$root" ] || continue
+    find "$root" -maxdepth 3 -type d -name .git 2>/dev/null | while IFS= read -r g; do
+      dirname "$g"
+    done
+  done
+}
+
+# 내 git 신원 자동 탐지: global + 각 레포의 local user.email
+detect_authors() {
+  { git config --global user.email 2>/dev/null
+    repos | while IFS= read -r r; do
+      git -C "$r" config --local user.email 2>/dev/null
+    done
+  } | grep -v '^$' | sort -u
+}
+
+if [ "${1:-}" = "--whoami" ]; then
+  echo "탐지된 git 신원:"
+  detect_authors | sed 's/^/  /'
+  [ -n "${STANDUP_AUTHORS:-}" ] && echo -e "\nconfig 로 고정된 값(자동 탐지 대신 사용):\n  ${STANDUP_AUTHORS}"
+  exit 0
+fi
+
+SINCE="${1:-${STANDUP_SINCE:-05:00}}"
+
+if [ -n "${STANDUP_AUTHORS:-}" ]; then
+  IFS=',' read -ra AUTHORS <<< "$STANDUP_AUTHORS"
+else
+  IFS=$'\n' read -rd '' -a AUTHORS < <(detect_authors; printf '\0')
+fi
+
+if [ ${#AUTHORS[@]} -eq 0 ]; then
+  echo "git 신원을 찾지 못했습니다. \`git config --global user.email\` 을 설정하거나" >&2
+  echo "$CONF 에 STANDUP_AUTHORS 를 직접 지정하세요." >&2
+  exit 1
+fi
+
+authArgs=(); for a in "${AUTHORS[@]}"; do a="${a// /}"; [ -n "$a" ] && authArgs+=(--author="$a"); done
 
 echo "# $(date +%F) 커밋"
 echo
@@ -20,21 +58,18 @@ echo "> 기준: \`$SINCE\` 이후 · 저자: ${AUTHORS[*]}"
 echo
 
 found=0
-for root in "${ROOTS[@]}"; do
-  [ -d "$root" ] || continue
-  while IFS= read -r gitdir; do
-    repo=$(dirname "$gitdir")
-    log=$(git -C "$repo" log --all --no-merges --since="$SINCE" \
-          "${authArgs[@]}" --format='- `%ad` %s' --date=format:'%H:%M' 2>/dev/null | sort)
-    [ -z "$log" ] && continue
-    found=1
-    branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
-    wip=$(git -C "$repo" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-    n=$(echo "$log" | wc -l | tr -d ' ')
-    echo "## $(basename "$repo") — ${n}건 · \`$branch\` · 미커밋 ${wip}"
-    echo "$log"
-    echo
-  done < <(find "$root" -maxdepth 3 -type d -name .git 2>/dev/null)
-done
+while IFS= read -r repo; do
+  log=$(git -C "$repo" log --all --no-merges --since="$SINCE" \
+        "${authArgs[@]}" --format='- `%ad` %s' --date=format:'%H:%M' 2>/dev/null | sort)
+  [ -z "$log" ] && continue
+  found=1
+  branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
+  wip=$(git -C "$repo" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+  n=$(echo "$log" | wc -l | tr -d ' ')
+  echo "## $(basename "$repo") — ${n}건 · \`$branch\` · 미커밋 ${wip}"
+  echo "$log"
+  echo
+done < <(repos)
+
 [ "$found" = "0" ] && echo "_해당 기간 커밋 없음_"
 exit 0
