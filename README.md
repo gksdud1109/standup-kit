@@ -5,9 +5,10 @@
 ## 설치
 
 ```bash
-git clone <personal repo> ~/src/standup
-~/src/standup/install.sh
+curl -fsSL https://raw.githubusercontent.com/gksdud1109/standup-kit/main/install.sh | bash
 ```
+
+소스를 `~/.standup/src` 로 받아 설치한다. 같은 명령을 다시 실행하면 최신으로 갱신한다.
 
 `~/.local/bin` 이 PATH에 없으면 설치할 때 알려준다.
 
@@ -16,6 +17,8 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
 
 커밋 저자는 따로 설정하지 않는다. `standup --whoami` 로 확인만 하고 넘어간다.
+
+레포를 직접 받아 쓰려면 클론한 자리에서 `install.sh` 를 실행해도 된다.
 
 ## 명령
 
@@ -87,6 +90,7 @@ standup | pbcopy
 | `~/.standup/config` | 스캔 경로·하루 시작 시각 |
 | `~/.standup/weekly-template.md` | 주간보고 양식 |
 | `~/.standup/log/<날짜>.md` | 일일보고 저장본 |
+| `~/.standup/src` | 소스 (curl 설치일 때만) |
 | `~/.claude/commands/{standup,weekly}.md` | 슬래시 커맨드 (Claude Code 있을 때) |
 | `~/.codex/skills/{standup,weekly}/SKILL.md` | 스킬 (Codex 있을 때) |
 

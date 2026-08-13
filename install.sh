@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 HOME_DIR="${STANDUP_HOME:-$HOME/.standup}"
-SRC="$(cd "$(dirname "$0")" && pwd)"
+REPO="${STANDUP_REPO:-https://github.com/gksdud1109/standup-kit.git}"
+
+# 체크아웃 안에서 실행하면 그 디렉터리를, `curl | bash` 로 실행하면 소스를 받아 쓴다.
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
+if [ ! -f "${SRC:-/nonexistent}/bin/standup" ]; then
+  SRC="$HOME_DIR/src"
+  if [ -d "$SRC/.git" ]; then
+    echo "소스 갱신: $SRC"
+    git -C "$SRC" pull --quiet --ff-only
+  else
+    echo "소스 내려받기: $REPO → $SRC"
+    mkdir -p "$(dirname "$SRC")"
+    git clone --depth 1 --quiet "$REPO" "$SRC"
+  fi
+fi
 
 mkdir -p "$HOME_DIR/log" "$HOME/.local/bin"
 install -m 755 "$SRC/bin/standup" "$HOME/.local/bin/standup"
