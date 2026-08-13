@@ -23,18 +23,26 @@ CONF
   echo "설정 생성: $HOME_DIR/config"
 fi
 
+# 주간보고 양식 — 사람이 고치는 파일이므로 덮어쓰지 않는다
+if [ ! -f "$HOME_DIR/weekly-template.md" ]; then
+  install -m 644 "$SRC/templates/weekly.md" "$HOME_DIR/weekly-template.md"
+  echo "양식 생성: $HOME_DIR/weekly-template.md  ← 대분류를 팀에 맞게 고치세요"
+fi
+
 # Claude Code — 슬래시 커맨드
 if [ -d "$HOME/.claude" ]; then
   mkdir -p "$HOME/.claude/commands"
   install -m 644 "$SRC/commands/standup.md" "$HOME/.claude/commands/standup.md"
-  echo "Claude Code 설치: /standup"
+  install -m 644 "$SRC/commands/weekly.md"  "$HOME/.claude/commands/weekly.md"
+  echo "Claude Code 설치: /standup, /weekly"
 fi
 
 # Codex — 스킬
 if [ -d "$HOME/.codex" ]; then
-  mkdir -p "$HOME/.codex/skills/standup"
+  mkdir -p "$HOME/.codex/skills/standup" "$HOME/.codex/skills/weekly"
   install -m 644 "$SRC/skills/standup/SKILL.md" "$HOME/.codex/skills/standup/SKILL.md"
-  echo "Codex 설치: skills/standup"
+  install -m 644 "$SRC/skills/weekly/SKILL.md"  "$HOME/.codex/skills/weekly/SKILL.md"
+  echo "Codex 설치: skills/standup, skills/weekly"
 fi
 
 case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *)

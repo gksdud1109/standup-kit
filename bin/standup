@@ -29,6 +29,34 @@ detect_authors() {
   } | grep -v '^$' | sort -u
 }
 
+# --logs <범위> : 그 기간의 일일 보고서 파일을 이어붙여 출력 (커밋에 없는 작업의 출처)
+if [ "${1:-}" = "--logs" ]; then
+  shift
+  LOGDIR="${STANDUP_HOME:-$HOME/.standup}/log"
+  dow=$(date +%u)
+  d() { date -v-"$1"d +%F 2>/dev/null || date -d "$1 days ago" +%F; }
+  case "${1:-weekly}" in
+    weekly|week|이번주)   FROM=$(d $((dow-1)));   TO=$(date +%F) ;;
+    last-week|lastweek|지난주)
+                         FROM=$(d $((dow-1+7))); TO=$(d $((dow-1))) ;;
+    [0-9]*)              FROM=$(d "${1%% *}");   TO=$(date +%F) ;;
+    *)                   FROM=$(d 7);            TO=$(date +%F) ;;
+  esac
+  found=0
+  for f in "$LOGDIR"/*.md; do
+    [ -e "$f" ] || continue
+    day=$(basename "$f" .md)
+    if [[ "$day" > "$FROM" || "$day" == "$FROM" ]] && [[ "$day" < "$TO" || "$day" == "$TO" ]]; then
+      found=1
+      echo "===== $day ====="
+      cat "$f"
+      echo
+    fi
+  done
+  [ "$found" = "0" ] && echo "_$FROM ~ $TO 구간에 저장된 일일 보고서 없음_"
+  exit 0
+fi
+
 if [ "${1:-}" = "--whoami" ]; then
   echo "탐지된 git 신원:"
   detect_authors | sed 's/^/  /'
@@ -43,12 +71,20 @@ SINCE="${1:-${STANDUP_SINCE:-05:00}}"
 #   --since=yesterday → 24시간 전 (어제 오전이 잘린다)
 # 달력 하루 단위로 쓰려면 자정으로 내려야 한다.
 day_ago() { date -v-"$1"d +%F 2>/dev/null || date -d "$1 days ago" +%F; }
+UNTIL=""
+dow=$(date +%u)                      # 1=월 .. 7=일
 case "$SINCE" in
   today|오늘)             SINCE="$(date +%F) 00:00" ;;
   yesterday|어제)         SINCE="$(day_ago 1) 00:00" ;;
+  weekly|week|이번주)      SINCE="$(day_ago $((dow-1))) 00:00" ;;
+  last-week|lastweek|지난주)
+                          SINCE="$(day_ago $((dow-1+7))) 00:00"
+                          UNTIL="$(day_ago $((dow-1))) 00:00" ;;
   [0-9]*" day ago"|[0-9]*" days ago")
                           SINCE="$(day_ago "${SINCE%% *}") 00:00" ;;
 esac
+# bash 3.2 는 set -u 에서 빈 배열 전개를 에러로 본다. 기본값을 넣어 비지 않게 한다.
+untilArgs=(--until="${UNTIL:-now}")
 
 if [ -n "${STANDUP_AUTHORS:-}" ]; then
   IFS=',' read -ra AUTHORS <<< "$STANDUP_AUTHORS"
@@ -67,7 +103,7 @@ authArgs=(); for a in "${AUTHORS[@]}"; do a="${a// /}"; [ -n "$a" ] && authArgs+
 # 범위가 하루를 넘으면 날짜까지 찍는다 (며칠째 지연인지 판정하려면 날짜가 필요)
 DATES=$(
   while IFS= read -r repo; do
-    git -C "$repo" log --all --no-merges --since="$SINCE" "${authArgs[@]}" \
+    git -C "$repo" log --all --no-merges --since="$SINCE" "${untilArgs[@]}" "${authArgs[@]}" \
         --format='%ad' --date=format:'%Y-%m-%d' 2>/dev/null
   done < <(repos) | sort -u | grep -c . || true
 )
@@ -75,7 +111,7 @@ if [ "${DATES:-0}" -gt 1 ]; then
   DATE_FMT='%m-%d %H:%M'
   SPAN=$(
     while IFS= read -r repo; do
-      git -C "$repo" log --all --no-merges --since="$SINCE" "${authArgs[@]}" \
+      git -C "$repo" log --all --no-merges --since="$SINCE" "${untilArgs[@]}" "${authArgs[@]}" \
           --format='%ad' --date=format:'%m-%d' 2>/dev/null
     done < <(repos) | sort -u
   )
@@ -87,7 +123,7 @@ fi
 
 echo "# $(date +%F) 커밋"
 echo
-echo "> 기준: \`$SINCE\` 이후${RANGE} · 저자: ${AUTHORS[*]}"
+echo "> 기준: \`$SINCE\`${UNTIL:+ ~ \`$UNTIL\`} 이후${RANGE} · 저자: ${AUTHORS[*]}"
 echo
 
 found=0
